@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ColorBit</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --panel: #0f0f1a;
+    --border: #1e1e3a;
+    --glow-r: #ff2244;
+    --glow-g: #00ff88;
+    --glow-b: #0088ff;
+    --glow-y: #ffcc00;
+    --glow-w: #ffffff;
+    --text: #c0c8e0;
+    --dim: #3a3a5a;
+    --led-off: #0d0d18;
+    --led-off-border: #1a1a2e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(0,136,255,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(255,34,68,0.04) 0%, transparent 60%);
+  }
+
+  .title-bar {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .title-bar h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 900;
+    letter-spacing: 0.3em;
+    background: linear-gradient(135deg, #0088ff, #00ff88, #ffcc00, #ff2244);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px rgba(0,136,255,0.5));
+  }
+
+  .title-bar p {
+    font-size: 0.75rem;
+    color: var(--dim);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .game-wrapper {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  .left-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+  }
+
+  /* LED Matrix */
+  .matrix-container {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow:
+      0 0 40px rgba(0,0,0,0.6),
+      inset 0 0 20px rgba(0,0,0,0.4);
+    position: relative;
+  }
+
+  .matrix-container::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(0,136,255,0.2), transparent, rgba(255,34,68,0.2));
+    z-index: -1;
+  }
+
+  .matrix-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    color: var(--dim);
+    text-align: center;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
+  .led-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 42px);
+    grid-template-rows: repeat(8, 42px);
+    gap: 4px;
+  }
+
+  .led-cell {
+    width: 42px;
+    height: 42px;
+    border-radius: 6px;
+    background: var(--led-off);
+    border: 1px solid var(--led-off-border);
+    transition: background 0.08s ease, box-shadow 0.08s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .led-cell::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 4px;
+    width: 10px;
+    height: 6px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 50%;
+    transform: rotate(-20deg);
+  }
+
+  .led-cell.color-WHITE {
+    background: #e8eeff;
+    box-shadow: 0 0 8px 2px rgba(220,230,255,0.9), 0 0 20px rgba(255,255,255,0.4);
+    border-color: rgba(255,255,255,0.5);
+  }
+
+  .led-cell.color-RED {
+    background: #ff1a3a;
+    box-shadow: 0 0 10px 3px rgba(255,30,60,0.9), 0 0 25px rgba(255,0,40,0.5);
+    border-color: rgba(255,60,80,0.6);
+  }
+
+  .led-cell.color-GREEN {
+    background: #00ff88;
+    box-shadow: 0 0 10px 3px rgba(0,255,130,0.9), 0 0 25px rgba(0,255,100,0.5);
+    border-color: rgba(0,255,120,0.6);
+  }
+
+  .led-cell.color-BLUE {
+    background: #0088ff;
+    box-shadow: 0 0 10px 3px rgba(0,140,255,0.9), 0 0 25px rgba(0,100,255,0.5);
+    border-color: rgba(40,140,255,0.6);
+  }
+
+  .led-cell.color-YELLOW {
+    background: #ffcc00;
+    box-shadow: 0 0 10px 3px rgba(255,200,0,0.9), 0 0 25px rgba(255,180,0,0.5);
+    border-color: rgba(255,200,0,0.6);
+  }
+
+  .led-cell.flash-green {
+    background: #00ff88 !important;
+    box-shadow: 0 0 16px 5px rgba(0,255,130,1), 0 0 35px rgba(0,255,100,0.7) !important;
+  }
+
+  .led-cell.flash-red {
+    background: #ff1a3a !important;
+    box-shadow: 0 0 16px 5px rgba(255,30,60,1), 0 0 35px rgba(255,0,40,0.7) !important;
+  }
+
+  /* Buttons */
+  .buttons-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .color-btn {
+    width: 80px;
+    height: 50px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    transition: transform 0.08s, box-shadow 0.08s, filter 0.08s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .color-btn::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 6px;
+    right: 6px;
+    height: 40%;
+    background: rgba(255,255,255,0.18);
+    border-radius: 4px 4px 50% 50%;
+  }
+
+  .color-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.15);
+  }
+
+  .color-btn:active, .color-btn.pressed {
+    transform: translateY(2px) scale(0.96);
+    filter: brightness(0.85);
+  }
+
+  .color-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+    filter: none;
+  }
+
+  .btn-red {
+    background: linear-gradient(180deg, #ff3355, #cc1133);
+    color: #fff;
+    box-shadow: 0 4px 0 #880022, 0 0 15px rgba(255,34,68,0.4);
+  }
+
+  .btn-green {
+    background: linear-gradient(180deg, #00ee77, #00aa55);
+    color: #003322;
+    box-shadow: 0 4px 0 #005533, 0 0 15px rgba(0,255,120,0.4);
+  }
+
+  .btn-blue {
+    background: linear-gradient(180deg, #2299ff, #0055dd);
+    color: #fff;
+    box-shadow: 0 4px 0 #003399, 0 0 15px rgba(0,136,255,0.4);
+  }
+
+  .btn-yellow {
+    background: linear-gradient(180deg, #ffdd22, #ccaa00);
+    color: #332200;
+    box-shadow: 0 4px 0 #886600, 0 0 15px rgba(255,200,0,0.4);
+  }
+
+  /* Right Info Panel */
+  .info-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    min-height: 420px;
+  }
+
+  .info-section-title {
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: var(--dim);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+
+  .score-display {
+    text-align: center;
+  }
+
+  .score-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2.8rem;
+    font-weight: 900;
+    color: var(--glow-g);
+    text-shadow: 0 0 20px rgba(0,255,130,0.6);
+    line-height: 1;
+  }
+
+  .score-label {
+    font-size: 0.6rem;
+    color: var(--dim);
+    letter-spacing: 0.2em;
+    margin-top: 4px;
+  }
+
+  .stats-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.72rem;
+  }
+
+  .stat-label {
+    color: var(--dim);
+  }
+
+  .stat-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  .stat-val.correct { color: var(--glow-g); }
+  .stat-val.wrong { color: var(--glow-r); }
+  .stat-val.neutral { color: var(--text); }
+  .stat-val.accent { color: var(--glow-b); }
+
+  /* Threshold bar */
+  .threshold-bar {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .threshold-pip {
+    width: 50px;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--led-off);
+    border: 1px solid var(--border);
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+
+  .threshold-pip.active {
+    background: var(--glow-b);
+    box-shadow: 0 0 8px rgba(0,136,255,0.8);
+  }
+
+  .threshold-pip.passed {
+    background: var(--glow-g);
+    box-shadow: 0 0 8px rgba(0,255,130,0.8);
+  }
+
+  .threshold-pip.failed {
+    background: var(--glow-r);
+    box-shadow: 0 0 8px rgba(255,34,68,0.8);
+  }
+
+  /* State message */
+  .state-msg {
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    transition: all 0.3s ease;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .state-msg.preview { color: var(--glow-w); border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
+  .state-msg.pattern { color: var(--glow-b); border-color: rgba(0,136,255,0.3); background: rgba(0,136,255,0.05); }
+  .state-msg.memorize { color: var(--glow-y); border-color: rgba(255,200,0,0.3); background: rgba(255,200,0,0.05); }
+  .state-msg.input { color: var(--glow-g); border-color: rgba(0,255,130,0.3); background: rgba(0,255,130,0.05); }
+  .state-msg.passed { color: var(--glow-g); border-color: rgba(0,255,130,0.5); background: rgba(0,255,130,0.08); }
+  .state-msg.failed { color: var(--glow-r); border-color: rgba(255,34,68,0.5); background: rgba(255,34,68,0.08); }
+  .state-msg.idle { color: var(--dim); }
+
+  /* Pattern progress dots */
+  .pattern-dots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
+  }
+
+  .pdot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--led-off);
+    border: 1px solid var(--border);
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+
+  .pdot.correct { background: var(--glow-g); box-shadow: 0 0 6px rgba(0,255,130,0.8); }
+  .pdot.wrong { background: var(--glow-r); box-shadow: 0 0 6px rgba(255,34,68,0.8); }
+  .pdot.active { background: var(--glow-b); box-shadow: 0 0 6px rgba(0,136,255,0.8); }
+
+  /* Start screen */
+  .start-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5,5,15,0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    gap: 28px;
+  }
+
+  .start-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 900;
+    letter-spacing: 0.4em;
+    background: linear-gradient(135deg, #0088ff 0%, #00ff88 40%, #ffcc00 70%, #ff2244 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 30px rgba(0,136,255,0.6));
+    animation: pulse-title 2s ease-in-out infinite alternate;
+  }
+
+  @keyframes pulse-title {
+    from { filter: drop-shadow(0 0 20px rgba(0,136,255,0.5)); }
+    to { filter: drop-shadow(0 0 50px rgba(0,255,130,0.7)); }
+  }
+
+  .start-subtitle {
+    font-size: 0.9rem;
+    color: var(--dim);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
+  .start-info {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 32px;
+    max-width: 420px;
+    text-align: center;
+    line-height: 1.8;
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+
+  .start-info strong {
+    color: var(--glow-b);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75rem;
+  }
+
+  .start-btn {
+    background: linear-gradient(135deg, #0055dd, #0088ff);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 16px 48px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    box-shadow: 0 0 30px rgba(0,136,255,0.5), 0 6px 0 #003399;
+    transition: all 0.15s;
+  }
+
+  .start-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0 50px rgba(0,136,255,0.8), 0 8px 0 #003399;
+  }
+
+  .start-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 0 20px rgba(0,136,255,0.5), 0 2px 0 #003399;
+  }
+
+  /* Timer bar */
+  .timer-bar-wrap {
+    height: 6px;
+    background: var(--led-off);
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .timer-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--glow-g), var(--glow-y), var(--glow-r));
+    border-radius: 3px;
+    transition: width 0.1s linear;
+    width: 100%;
+  }
+
+  /* RT display */
+  .rt-display {
+    text-align: center;
+    font-size: 0.65rem;
+    color: var(--dim);
+    min-height: 18px;
+  }
+
+  .rt-display span {
+    color: var(--glow-y);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+  }
+
+  /* Speed bonus popup */
+  .bonus-popup {
+    position: fixed;
+    pointer-events: none;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--glow-g);
+    text-shadow: 0 0 10px rgba(0,255,130,0.8);
+    animation: float-up 0.9s ease-out forwards;
+    z-index: 200;
+  }
+
+  .bonus-popup.neg {
+    color: var(--glow-r);
+    text-shadow: 0 0 10px rgba(255,34,68,0.8);
+  }
+
+  @keyframes float-up {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-60px); }
+  }
+
+  .grid-flash-overlay {
+    position: absolute;
+    inset: 16px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0);
+    pointer-events: none;
+    transition: background 0.1s;
+    z-index: 10;
+  }
+
+  .grid-flash-overlay.active {
+    background: rgba(255,255,255,0.18);
+  }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .game-wrapper { flex-direction: column; align-items: center; }
+    .info-panel { width: 360px; }
+    .led-grid { grid-template-columns: repeat(8, 36px); grid-template-rows: repeat(8, 36px); }
+    .led-cell { width: 36px; height: 36px; }
+    .color-btn { width: 68px; height: 44px; font-size: 0.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="start-overlay" id="startOverlay">
+  <div class="start-title">COLORBIT</div>
+  <div class="start-subtitle">Pattern Recognition &amp; Memory Training</div>
+  <div class="start-info">
+    <p>Watch the <strong>LED pattern</strong>, memorize the colors, then press the matching color buttons when each position blinks.</p>
+    <br>
+    <p>Pass <strong>3 thresholds</strong> with 75%+ accuracy to complete Mode 1.</p>
+    <br>
+    <p>Faster inputs earn <strong>speed bonuses!</strong></p>
+  </div>
+  <button class="start-btn" onclick="startGame()">START GAME</button>
+</div>
+
+<div class="title-bar">
+  <h1>COLORBIT</h1>
+  <p>Pattern Recognition &mdash; Mode 1</p>
+</div>
+
+<div class="game-wrapper">
+  <div class="left-panel">
+    <div class="matrix-container">
+      <div class="matrix-label">8 × 8 LED Matrix</div>
+      <div class="grid-flash-overlay" id="gridFlashOverlay"></div>
+      <div class="led-grid" id="ledGrid"></div>
+    </div>
+    <div class="buttons-row">
+      <button class="color-btn btn-red" id="btnRed" onclick="handleInput('RED')" disabled>RED</button>
+      <button class="color-btn btn-green" id="btnGreen" onclick="handleInput('GREEN')" disabled>GREEN</button>
+      <button class="color-btn btn-blue" id="btnBlue" onclick="handleInput('BLUE')" disabled>BLUE</button>
+      <button class="color-btn btn-yellow" id="btnYellow" onclick="handleInput('YELLOW')" disabled>YELLOW</button>
+    </div>
+  </div>
+
+  <div class="info-panel">
+    <div class="info-section-title">Score</div>
+    <div class="score-display">
+      <div class="score-value" id="scoreVal">0</div>
+      <div class="score-label">POINTS</div>
+    </div>
+
+    <div class="info-section-title">Threshold Progress</div>
+    <div class="threshold-bar">
+      <div class="threshold-pip" id="tpip1"></div>
+      <div class="threshold-pip" id="tpip2"></div>
+      <div class="threshold-pip" id="tpip3"></div>
+    </div>
+
+    <div class="info-section-title">Stats</div>
+    <div class="stats-grid">
+      <div class="stat-row">
+        <span class="stat-label">Threshold</span>
+        <span class="stat-val accent" id="statThresh">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Pattern</span>
+        <span class="stat-val neutral" id="statPattern">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Correct</span>
+        <span class="stat-val correct" id="statCorrect">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Wrong</span>
+        <span class="stat-val wrong" id="statWrong">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Accuracy</span>
+        <span class="stat-val neutral" id="statAcc">—</span>
+      </div>
+    </div>
+
+    <div class="info-section-title">Patterns</div>
+    <div class="pattern-dots" id="patternDots"></div>
+
+    <div class="info-section-title">Input Timer</div>
+    <div class="timer-bar-wrap">
+      <div class="timer-bar-fill" id="timerBar"></div>
+    </div>
+    <div class="rt-display" id="rtDisplay">&nbsp;</div>
+
+    <div class="state-msg idle" id="stateMsg">Waiting to start…</div>
+  </div>
+</div>
+
+<script>
+// ─── Configuration ────────────────────────────────────────────────────────────
+const THRESHOLDS = [
+  { id:1, patterns:5,  size:4, colors:2, cursorMs:2000, patternMs:2000, tmax:5000 },
+  { id:2, patterns:8,  size:5, colors:3, cursorMs:1600, patternMs:1600, tmax:4000 },
+  { id:3, patterns:10, size:6, colors:3, cursorMs:1200, patternMs:1200, tmax:3000 },
+];
+
+const COLORS = ['RED','GREEN','BLUE','YELLOW'];
+const PASS_ACC = 0.75;
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let grid = [];              // 64 cells
+let thresholdIdx = 0;
+let patternIdx = 0;
+let score = 0;
+let totalCorrect = 0;
+let totalWrong = 0;
+let threshCorrect = 0;
+let threshWrong = 0;
+let patternResults = [];    // per pattern: true/false
+let currentPattern = [];    // [{pos, color}]
+let inputPhaseIdx = 0;
+let inputEnabled = false;
+let cursorBlinkStart = 0;
+let inputTimer = null;
+let timerAnimFrame = null;
+let activeTimeouts = [];
+let gameStarted = false;
+
+// ─── Grid Init ────────────────────────────────────────────────────────────────
+function initGrid() {
+  const container = document.getElementById('ledGrid');
+  container.innerHTML = '';
+  grid = [];
+  for (let i = 0; i < 64; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'led-cell';
+    cell.dataset.idx = i;
+    container.appendChild(cell);
+    grid.push(cell);
+  }
+}
+
+function setCell(idx, colorName) {
+  const cell = grid[idx];
+  cell.className = 'led-cell';
+  if (colorName && colorName !== 'OFF') {
+    cell.classList.add('color-' + colorName);
+  }
+}
+
+function clearGrid() {
+  for (let i = 0; i < 64; i++) setCell(i, 'OFF');
+}
+
+function flashCell(idx, colorClass, ms) {
+  const cell = grid[idx];
+  cell.classList.add(colorClass);
+  const t = safeTmo(() => {
+    cell.classList.remove(colorClass);
+  }, ms);
+  return t;
+}
+
+// ─── Safe timeout helpers ─────────────────────────────────────────────────────
+function safeTmo(fn, ms) {
+  const id = setTimeout(fn, ms);
+  activeTimeouts.push(id);
+  return id;
+}
+
+function clearAllTimers() {
+  activeTimeouts.forEach(clearTimeout);
+  activeTimeouts = [];
+  if (timerAnimFrame) cancelAnimationFrame(timerAnimFrame);
+  timerAnimFrame = null;
+}
+
+// ─── Pattern Generator ────────────────────────────────────────────────────────
+function generatePattern(size, numColors) {
+  const allowed = COLORS.slice(0, numColors);
+  // Pick a cluster center in the inner 6x6
+  const cx = 1 + Math.floor(Math.random() * 5);
+  const cy = 1 + Math.floor(Math.random() * 5);
+  const positions = new Set();
+
+  // BFS-style cluster growth
+  const candidates = [[cx, cy]];
+  while (positions.size < size && candidates.length > 0) {
+    const ridx = Math.floor(Math.random() * candidates.length);
+    const [r, c] = candidates.splice(ridx, 1)[0];
+    const key = r * 8 + c;
+    if (r < 0 || r > 7 || c < 0 || c > 7) continue;
+    if (positions.has(key)) continue;
+    positions.add(key);
+    // Add neighbours
+    [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc]) => {
+      const nr = r+dr, nc = c+dc;
+      if (nr>=0 && nr<8 && nc>=0 && nc<8 && !positions.has(nr*8+nc)) {
+        candidates.push([nr, nc]);
+      }
+    });
+  }
+
+  const posArr = Array.from(positions);
+  return posArr.map(pos => ({
+    pos,
+    color: allowed[Math.floor(Math.random() * allowed.length)]
+  }));
+}
+
+// ─── UI Helpers ───────────────────────────────────────────────────────────────
+function setState(msg, cls) {
+  const el = document.getElementById('stateMsg');
+  el.textContent = msg;
+  el.className = 'state-msg ' + (cls || 'idle');
+}
+
+function updateScore() {
+  document.getElementById('scoreVal').textContent = Math.max(0, score);
+}
+
+function updateStats() {
+  const th = THRESHOLDS[thresholdIdx];
+  document.getElementById('statThresh').textContent = th ? th.id + ' / 3' : '✓';
+  document.getElementById('statPattern').textContent =
+    patternIdx + 1 + ' / ' + (th ? th.patterns : '—');
+  document.getElementById('statCorrect').textContent = threshCorrect;
+  document.getElementById('statWrong').textContent = threshWrong;
+  const total = threshCorrect + threshWrong;
+  document.getElementById('statAcc').textContent =
+    total > 0 ? Math.round(threshCorrect/total*100) + '%' : '—';
+}
+
+function updateThreshPips() {
+  for (let i = 0; i < 3; i++) {
+    const pip = document.getElementById('tpip' + (i+1));
+    pip.className = 'threshold-pip';
+    if (i < thresholdIdx) pip.classList.add('passed');
+    else if (i === thresholdIdx) pip.classList.add('active');
+  }
+}
+
+function rebuildPatternDots(count) {
+  const el = document.getElementById('patternDots');
+  el.innerHTML = '';
+  patternResults = [];
+  for (let i = 0; i < count; i++) {
+    const d = document.createElement('div');
+    d.className = 'pdot' + (i === 0 ? ' active' : '');
+    el.appendChild(d);
+    patternResults.push(null);
+  }
+}
+
+function markPatternDot(idx, pass) {
+  const el = document.getElementById('patternDots');
+  const dots = el.querySelectorAll('.pdot');
+  if (dots[idx]) {
+    dots[idx].className = 'pdot ' + (pass ? 'correct' : 'wrong');
+  }
+  if (dots[idx+1]) {
+    dots[idx+1].className = 'pdot active';
+  }
+}
+
+function setButtonsEnabled(enabled) {
+  ['btnRed','btnGreen','btnBlue','btnYellow'].forEach(id => {
+    document.getElementById(id).disabled = !enabled;
+  });
+}
+
+function showTimerBar(tmax) {
+  const bar = document.getElementById('timerBar');
+  const start = performance.now();
+  bar.style.width = '100%';
+  function tick() {
+    const elapsed = performance.now() - start;
+    const pct = Math.max(0, 1 - elapsed / tmax);
+    bar.style.width = (pct * 100) + '%';
+    if (pct > 0 && inputEnabled) {
+      timerAnimFrame = requestAnimationFrame(tick);
+    }
+  }
+  timerAnimFrame = requestAnimationFrame(tick);
+}
+
+function showBonus(text, isNeg, x, y) {
+  const el = document.createElement('div');
+  el.className = 'bonus-popup' + (isNeg ? ' neg' : '');
+  el.textContent = text;
+  el.style.left = (x || window.innerWidth/2 - 30) + 'px';
+  el.style.top = (y || window.innerHeight/2) + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+
+function gridFlashWhite(cb) {
+  const overlay = document.getElementById('gridFlashOverlay');
+  overlay.classList.add('active');
+  safeTmo(() => {
+    overlay.classList.remove('active');
+    clearGrid();
+    safeTmo(cb, 150);
+  }, 200);
+}
+
+// ─── Game Flow ────────────────────────────────────────────────────────────────
+function startGame() {
+  document.getElementById('startOverlay').style.display = 'none';
+  gameStarted = true;
+  thresholdIdx = 0;
+  score = 0;
+  totalCorrect = 0;
+  totalWrong = 0;
+  updateScore();
+  startThreshold();
+}
+
+function startThreshold() {
+  if (thresholdIdx >= THRESHOLDS.length) {
+    gameComplete();
+    return;
+  }
+  const th = THRESHOLDS[thresholdIdx];
+  threshCorrect = 0;
+  threshWrong = 0;
+  patternIdx = 0;
+  updateThreshPips();
+  rebuildPatternDots(th.patterns);
+  updateStats();
+  setState('Threshold ' + th.id + ' — Ready', 'preview');
+  safeTmo(() => runPattern(), 800);
+}
+
+function runPattern() {
+  clearAllTimers();
+  clearGrid();
+  setButtonsEnabled(false);
+  document.getElementById('timerBar').style.width = '100%';
+  document.getElementById('rtDisplay').innerHTML = '&nbsp;';
+
+  const th = THRESHOLDS[thresholdIdx];
+  currentPattern = generatePattern(th.size, th.colors);
+  inputPhaseIdx = 0;
+
+  updateStats();
+  setState('New Pattern!', 'preview');
+
+  // Step 1: Grid flash
+  gridFlashWhite(() => {
+    // Step 2: Cursor preview
+    setState('Preview Pattern', 'preview');
+    showCursorPreview(0, th, () => {
+      // Step 3: Pattern display
+      setState('Memorize Pattern', 'memorize');
+      showPatternColors(th, () => {
+        // Step 4: Hide
+        clearGrid();
+        setState('Input Phase', 'input');
+        // Step 5: Input phase
+        safeTmo(() => startInputPhase(th), 300);
+      });
+    });
+  });
+}
+
+function showCursorPreview(idx, th, done) {
+  if (idx >= currentPattern.length) { done(); return; }
+  setCell(currentPattern[idx].pos, 'WHITE');
+  safeTmo(() => showCursorPreview(idx+1, th, done), th.cursorMs);
+}
+
+function showPatternColors(th, done) {
+  currentPattern.forEach(({pos, color}) => setCell(pos, color));
+  safeTmo(() => {
+    clearGrid();
+    done();
+  }, th.patternMs);
+}
+
+function startInputPhase(th) {
+  inputPhaseIdx = 0;
+  waitForInput(th);
+}
+
+function waitForInput(th) {
+  if (inputPhaseIdx >= currentPattern.length) {
+    // Pattern done
+    finishPattern(th);
+    return;
+  }
+
+  const entry = currentPattern[inputPhaseIdx];
+  clearGrid();
+
+  // Blink cursor on
+  setCell(entry.pos, 'WHITE');
+  inputEnabled = true;
+  setButtonsEnabled(true);
+  cursorBlinkStart = performance.now();
+
+  showTimerBar(th.tmax);
+
+  // Timeout
+  inputTimer = safeTmo(() => {
+    if (!inputEnabled) return;
+    // Timeout = wrong
+    inputEnabled = false;
+    setButtonsEnabled(false);
+    recordInput(false, th.tmax, entry, th, true);
+  }, th.tmax);
+}
+
+function handleInput(color) {
+  if (!inputEnabled) return;
+  inputEnabled = false;
+  setButtonsEnabled(false);
+  clearTimeout(inputTimer);
+  if (timerAnimFrame) { cancelAnimationFrame(timerAnimFrame); timerAnimFrame = null; }
+
+  const entry = currentPattern[inputPhaseIdx];
+  const rt = performance.now() - cursorBlinkStart;
+  const correct = (color === entry.color);
+  recordInput(correct, rt, entry, THRESHOLDS[thresholdIdx], false);
+}
+
+function recordInput(correct, rt, entry, th, timeout) {
+  document.getElementById('timerBar').style.width = '0%';
+
+  if (correct) {
+    const speedBonus = Math.round(((th.tmax - rt) / th.tmax) * 5);
+    score += 10 + speedBonus;
+    threshCorrect++;
+    totalCorrect++;
+    // Feedback
+    setCell(entry.pos, 'GREEN');
+    flashCell(entry.pos, 'flash-green', 350);
+    // Show bonus
+    const rtMs = Math.round(rt);
+    document.getElementById('rtDisplay').innerHTML = 'RT: <span>' + rtMs + 'ms</span>';
+    showBonus('+' + (10+speedBonus), false);
+    safeTmo(() => {
+      inputPhaseIdx++;
+      waitForInput(th);
+    }, 400);
+  } else {
+    score = Math.max(0, score - 5);
+    threshWrong++;
+    totalWrong++;
+    // Feedback
+    flashCell(entry.pos, 'flash-red', 350);
+    if (timeout) {
+      document.getElementById('rtDisplay').innerHTML = 'TIMEOUT';
+    } else {
+      document.getElementById('rtDisplay').innerHTML = 'WRONG';
+    }
+    showBonus('-5', true);
+    safeTmo(() => {
+      inputPhaseIdx++;
+      waitForInput(th);
+    }, 400);
+  }
+
+  updateScore();
+  updateStats();
+}
+
+function finishPattern(th) {
+  clearGrid();
+  setButtonsEnabled(false);
+  inputEnabled = false;
+
+  // Check if this pattern was mostly correct
+  // (We track per-LED above; for dot coloring use overall threshold progress)
+  const patternPass = true; // dot coloring is informational
+  markPatternDot(patternIdx, true);
+
+  patternIdx++;
+  updateStats();
+
+  if (patternIdx >= th.patterns) {
+    // Threshold complete - evaluate
+    safeTmo(() => evaluateThreshold(th), 600);
+  } else {
+    safeTmo(() => runPattern(), 800);
+  }
+}
+
+function evaluateThreshold(th) {
+  const totalInputs = th.patterns * th.size;
+  const pass = threshCorrect / totalInputs >= PASS_ACC;
+
+  // Update all dots
+  const dotsEl = document.getElementById('patternDots');
+  dotsEl.querySelectorAll('.pdot').forEach(d => {
+    if (!d.classList.contains('correct') && !d.classList.contains('wrong')) {
+      d.className = 'pdot';
+    }
+  });
+
+  if (pass) {
+    setState('✓ Threshold ' + th.id + ' Passed!', 'passed');
+    document.getElementById('tpip' + th.id).className = 'threshold-pip passed';
+    score += 50; // bonus for threshold pass
+    updateScore();
+    thresholdIdx++;
+    safeTmo(() => {
+      if (thresholdIdx >= THRESHOLDS.length) {
+        gameComplete();
+      } else {
+        startThreshold();
+      }
+    }, 2000);
+  } else {
+    setState('✗ Threshold Failed — Retry', 'failed');
+    document.getElementById('tpip' + th.id).className = 'threshold-pip failed';
+    safeTmo(() => {
+      document.getElementById('tpip' + th.id).className = 'threshold-pip active';
+      startThreshold();
+    }, 2200);
+  }
+}
+
+function gameComplete() {
+  clearGrid();
+  setButtonsEnabled(false);
+  setState('🏆 Mode 1 Complete!', 'passed');
+
+  // Celebration flash
+  const celebColors = ['RED','GREEN','BLUE','YELLOW','WHITE'];
+  let ci = 0;
+  function celebStep() {
+    if (ci > 20) { clearGrid(); return; }
+    const positions = [];
+    for (let i = 0; i < 8; i++) positions.push(Math.floor(Math.random()*64));
+    positions.forEach(p => setCell(p, celebColors[Math.floor(Math.random()*celebColors.length)]));
+    ci++;
+    safeTmo(celebStep, 150);
+  }
+  celebStep();
+
+  // Show final overlay
+  safeTmo(() => {
+    const overlay = document.getElementById('startOverlay');
+    overlay.innerHTML = `
+      <div class="start-title">COMPLETE!</div>
+      <div class="start-subtitle">Mode 1 — Pattern Recognition</div>
+      <div class="start-info">
+        <p style="font-family:'Orbitron',sans-serif;font-size:2rem;color:#00ff88;text-shadow:0 0 20px rgba(0,255,130,0.7)">${Math.max(0,score)}</p>
+        <p style="margin-top:8px;color:#3a3a5a">FINAL SCORE</p>
+        <br>
+        <p>Correct: <strong style="color:#00ff88">${totalCorrect}</strong> &nbsp; Wrong: <strong style="color:#ff2244">${totalWrong}</strong></p>
+        <br>
+        <p>All 3 thresholds passed!<br>Pattern recognition training complete.</p>
+      </div>
+      <button class="start-btn" onclick="resetGame()">PLAY AGAIN</button>
+    `;
+    overlay.style.display = 'flex';
+  }, 3200);
+}
+
+function resetGame() {
+  clearAllTimers();
+  clearGrid();
+  thresholdIdx = 0;
+  patternIdx = 0;
+  score = 0;
+  totalCorrect = 0;
+  totalWrong = 0;
+  threshCorrect = 0;
+  threshWrong = 0;
+  patternResults = [];
+  currentPattern = [];
+  inputPhaseIdx = 0;
+  inputEnabled = false;
+
+  updateScore();
+  updateThreshPips();
+  setState('Waiting to start…', 'idle');
+  document.getElementById('rtDisplay').innerHTML = '&nbsp;';
+  document.getElementById('timerBar').style.width = '100%';
+  document.getElementById('patternDots').innerHTML = '';
+  document.getElementById('statThresh').textContent = '—';
+  document.getElementById('statPattern').textContent = '—';
+  document.getElementById('statCorrect').textContent = '0';
+  document.getElementById('statWrong').textContent = '0';
+  document.getElementById('statAcc').textContent = '—';
+
+  const overlay = document.getElementById('startOverlay');
+  overlay.innerHTML = `
+    <div class="start-title">COLORBIT</div>
+    <div class="start-subtitle">Pattern Recognition &amp; Memory Training</div>
+    <div class="start-info">
+      <p>Watch the <strong>LED pattern</strong>, memorize the colors, then press the matching color buttons when each position blinks.</p>
+      <br>
+      <p>Pass <strong>3 thresholds</strong> with 75%+ accuracy to complete Mode 1.</p>
+      <br>
+      <p>Faster inputs earn <strong>speed bonuses!</strong></p>
+    </div>
+    <button class="start-btn" onclick="startGame()">START GAME</button>
+  `;
+}
+
+// ─── Keyboard support ─────────────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (!inputEnabled) return;
+  const map = { 'r':'RED', 'g':'GREEN', 'b':'BLUE', 'y':'YELLOW',
+                '1':'RED', '2':'GREEN', '3':'BLUE', '4':'YELLOW' };
+  const color = map[e.key.toLowerCase()];
+  if (color) {
+    const btn = document.getElementById('btn'+color[0]+color.slice(1).toLowerCase());
+    if (btn) { btn.classList.add('pressed'); setTimeout(() => btn.classList.remove('pressed'), 150); }
+    handleInput(color);
+  }
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+initGrid();
+updateThreshPips();
+</script>
+</body>
+</html>
